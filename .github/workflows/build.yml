@@ -1,0 +1,86 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9.18'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update -qq
+          sudo apt install -y -qq \
+            python3-pip \
+            ffmpeg \
+            libffmpeg-dev \
+            libsmpeg-dev \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            libgl1-mesa-dev \
+            libsqlite3-dev \
+            git \
+            zip \
+            unzip \
+            openjdk-11-jdk
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install kivy==2.2.0 requests buildozer
+
+      - name: Copy spec file
+        run: |
+          cp buildozer.spec buildozer.spec.bak || true
+
+      - name: Clean old builds
+        run: buildozer android clean || true
+
+      - name: Build debug APK
+        run: buildozer android debug
+        timeout-minutes: 90
+
+      - name: Find APK
+        id: find_apk
+        run: |
+          APK=$(find bin -name "*.apk" | head -1)
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "APK 文件: $APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockanalysis-apk
+          path: ${{ steps.find_apk.outputs.apk_path }}
+          retention-days: 7
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Done
+        run: |
+          echo "========================================"
+          echo "  ✅ APK 构建完成！"
+          echo ""
+          echo "  请在 'Artifacts' 中下载 APK 文件"
+          echo "========================================"
