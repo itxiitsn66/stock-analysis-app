@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,7 +21,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9.18'
+          python-version: '3.12'
+
+      - name: Print Python version
+        run: |
+          python --version
+          pip --version
 
       - name: Install system dependencies
         run: |
@@ -41,25 +49,43 @@ jobs:
             gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good \
             libgl1-mesa-dev \
+            libgles2-mesa-dev \
             libsqlite3-dev \
             git \
             zip \
             unzip \
-            openjdk-11-jdk
+            openjdk-17-jdk
 
       - name: Install Python packages
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install kivy==2.2.0 requests buildozer
+          pip install kivy buildozer requests
+
+      - name: Print buildozer version
+        run: |
+          buildozer --version
+
+      - name: Prepare buildozer.spec
+        run: |
+          ls -la
+          cat buildozer.spec
 
       - name: Build debug APK
         run: |
-          buildozer android debug
+          buildozer android debug || true
         timeout-minutes: 80
 
-      - name: List output files
+      - name: Debug - List all files
+        if: always()
         run: |
-          ls -lh bin/ 2>/dev/null || echo "No bin folder"
+          echo "=== Current directory ==="
+          ls -la
+          echo "=== Bin directory ==="
+          ls -la bin/ 2>/dev/null || echo "No bin directory"
+          echo "=== .buildozer directory ==="
+          ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory"
+          echo "=== Home directory ==="
+          ls -la ~/ 2>/dev/null | head -20
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -68,4 +94,5 @@ jobs:
           name: stockanalysis-apk
           path: |
             bin/*.apk
+            .buildozer/**/*.apk
           retention-days: 7
