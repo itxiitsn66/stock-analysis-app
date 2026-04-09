@@ -25,7 +25,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt update -qq 2>&1 | tail -5
+          sudo apt update -qq
           sudo apt install -y -qq \
             python3-pip \
             ffmpeg \
@@ -48,26 +48,28 @@ jobs:
             git \
             zip \
             unzip \
-            openjdk-17-jdk \
-            2>&1 | tail -20
+            openjdk-17-jdk
 
       - name: Install Python packages
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install kivy buildozer requests
+          pip install cython==0.29.33
+          pip install kivy==2.2.0 buildozer requests
 
       - name: Build debug APK
         run: |
-          buildozer android debug 2>&1 | tail -50
+          buildozer android debug
         timeout-minutes: 80
 
-      - name: Debug - List all files
+      - name: Debug - List APK files
         if: always()
         run: |
-          echo "=== Current directory ==="
-          ls -la
+          echo "=== APK files found ==="
+          find . -name "*.apk" 2>/dev/null
           echo "=== Bin directory ==="
-          find . -name "*.apk" 2>/dev/null || echo "No APK files found"
+          ls -la bin/ 2>/dev/null || echo "No bin directory"
+          echo "=== Buildozer cache ==="
+          ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
